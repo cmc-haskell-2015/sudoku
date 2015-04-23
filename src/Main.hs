@@ -156,11 +156,11 @@ checkStep f row col = (checkRow f row) &&
 -- check if there are any empty cells left ------------------------------------
 checkFilled :: Field -> Bool
 checkFilled [] = True
-checkFilled (x:xs) = (not (isIn x 0)) && (checkWin xs)  
+checkFilled (x:xs) = (not (isIn x 0)) && (checkFilled xs)  
 
 -- print results of the game --------------------------------------------------
-checkWin :: Field -> Bool
-checkWin f | (checkField == True) = winMsg
+checkWin :: Field -> IO ()
+checkWin f | (checkField f == True) = winMsg
            | otherwise = errMsg
 
 -- check all the field for correctness ----------------------------------------
@@ -186,7 +186,7 @@ checkAllSqrs f = (checkSqr f 1 1) && (checkSqr f 1 4) && (checkSqr f 1 7) &&
 playSudoku :: Field -> IO ()
 playSudoku field = do
     let gs = checkFilled field
-    if (gs == True) then (checkWin f) else (playStep field) 
+    if (gs == True) then (checkWin field) else (playStep field) 
 
 -- request input for the next step --------------------------------------------
 playStep :: Field -> IO ()
