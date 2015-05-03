@@ -1,12 +1,14 @@
 module Main where
 
-import AuxFunc
 import Types
 import Game
+import Parser
+import Interface
 
 import Data.Functor
 import Data.Char
-import Data.String 
+import Data.String
+import Data.Monoid 
 
 import Graphics.Gloss.Interface.Pure.Game
 
@@ -14,57 +16,30 @@ import Graphics.Gloss.Interface.Pure.Game
 main :: IO()
 main = do
     greetingsMsg
-    playFromFile 
---  playGame (initField, Ok, InProgress) 
+    interface  -- start with graphics
+    -- console -- start in console    
 -- ============================================================================
 
-
--- function for field hard-coding ---------------------------------------------
-initField :: Field
-initField = [[Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
-             [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
-             [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
-             [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
-             [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
-             [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
-             [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
-             [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
-             [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty]]
-                 
-
-                 
-                 
--- =============== MANAGE GAME ================================================ 
--- request file name ----------------------------------------------------------   
-playFromFile :: IO ()
-playFromFile = do
-    print "Enter file name: "
-    file <- getLine
-    readGame file
-
--- read the game from file and start it ---------------------------------------
-readGame :: FilePath -> IO ()
-readGame file = do
-    strList <- lines <$> readFile file
-    let f = (createField strList)    
-    if ((checkField f == True) && (checkFinished f == False)) then     
-        playGame (f, Ok, InProgress)
+-- start console game ---------------------------------------------------------
+console :: IO ()
+console = do 
+    (f, ms, gs) <- readWorld
+    if (gs == InProgress) then 
+        playGame (f, ms, gs)
     else
-        print "Incorrect input puzzle"
-
--- transform file contents into field representation --------------------------
-createField :: [String] -> Field
-createField [] = []
-createField (x:xs) = (parseString x) : (createField xs)
-
--- transform string into list of cells ----------------------------------------
-parseString :: String -> [Cell]
-parseString [] = []
-parseString ('0':xs) = Empty : parseString xs
-parseString (x:xs) | (isDigit x == True) 
-                       = Fixed (ord x - ord '0') : parseString xs
-                   | otherwise = parseString xs 
-
-
-   
-    
+        print gs
+                   
+-- start game with graphics ---------------------------------------------------                 
+interface :: IO ()
+interface = do
+    (f, ms, gs) <- readWorld
+    if (gs == InProgress) then do 
+        play display bgColor fps (f, ms, gs) drawWorld handleWorld updateWorld       
+    else do
+        print gs
+    where    
+        windowSize = (winWidth, winHeight)
+        windowOffset = (200, 200)
+        display = InWindow "BEST SUDOKU EVAR" windowSize windowOffset
+        bgColor = white
+        fps = 60     

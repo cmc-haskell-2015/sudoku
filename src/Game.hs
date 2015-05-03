@@ -1,7 +1,25 @@
 module Game where
-import AuxFunc
 import Types
+        
+-- =============== AUXILIARY FUNCTIONS ========================================        
+-- to be used in 'do'-blocks --------------------------------------------------
+return_same :: a -> a
+return_same x = x
 
+-- check if the list contains the digit ---------------------------------------
+isIn :: [Int] -> Int -> Bool
+isIn [] _ = False
+isIn (x:xs) y | y == x = True
+              | otherwise = (isIn xs y)    
+
+-- get the index for central cell of the square 3x3 area ----------------------
+centerInd :: Int -> Int
+centerInd i = 3 * (div i 3) + 1  
+
+greetingsMsg :: IO ()
+greetingsMsg = print "Welcome to Sudoku puzzle game" 
+
+-- =============== GAME FUNCTIONS =============================================
 -- main game function ---------------------------------------------------------
 playGame :: World -> IO ()
 playGame (f, ms, gs) = do
