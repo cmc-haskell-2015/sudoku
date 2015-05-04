@@ -75,6 +75,20 @@ getGameState f = do
 modifyRow :: [Cell] -> Int -> Int -> [Cell]
 modifyRow r col num = (take col r) ++ ((Filled num) : (drop (col+1) r))                 
 
+-- clear (<row>, <col>) cell --------------------------------------------------
+clearCell :: World -> Int -> Int -> World
+clearCell (f0,ms0,gs0) row col = do
+    let c = getCell f0 row col
+    if (c == (Fixed 0)) then do
+        return_same (f0, ErrFixed, gs0)
+    else do      
+        return_same (((take row f0) ++ 
+                        (((take col (f0 !! row)) ++ 
+                        ((Empty) : drop (col+1) (f0 !! row))) : 
+                     (drop (row+1) f0))), 
+                     Ok, 
+                     gs0)
+                            
 -- put <num> digit in (<row>, <col>) cell on the field ------------------------                 
 fillCell :: Field -> Int -> Int -> Int -> Field
 fillCell f row col num = (take row f) ++ 

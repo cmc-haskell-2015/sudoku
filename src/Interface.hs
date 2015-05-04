@@ -88,19 +88,19 @@ drawWorld (f, ms, gs) = drawField f ms
 -- info -----------------------------------------------------------------------
 drawInfo :: Picture
 drawInfo = translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
-                             (fromIntegral (cellSize)) 
+                             (fromIntegral (0)) 
                        (scale (0.4 * digScl) (0.4 * digScl) 
                            (text ("Select a cell that you want")))
         <> translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
-                             (fromIntegral (div cellSize 2)) 
-                       (scale (0.4 * digScl) (0.4 * digScl)                            
-                             (text ("to (re)fill by mouse click")))
-        <> translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
-                             (0) 
-                       (scale (0.4 * digScl) (0.4 * digScl) 
-                             (text ("then choose a digit")))
-        <> translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
                              (fromIntegral (-div cellSize 2)) 
+                       (scale (0.4 * digScl) (0.4 * digScl)                            
+                             (text ("to (re)fill by mouse click.")))
+        <> translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
+                             (fromIntegral (-cellSize)) 
+                       (scale (0.4 * digScl) (0.4 * digScl) 
+                             (text ("Then choose a digit")))
+        <> translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
+                             (fromIntegral (-div (3*cellSize) 2)) 
                        (scale (0.4 * digScl) (0.4 * digScl)                              
                              (text ("from the numberpad")))
 
@@ -237,8 +237,18 @@ drawNumberpad = pictures [
                   drawCell (Filled 9)
                       (fromIntegral trnpX)
                       (fromIntegral(trnpY - 2 * cellSize)) 
-                      (cellSize) (cellSize)                ]
-               
+                      (cellSize) (cellSize),
+                  drawClearButton                          ]
+
+drawClearButton :: Picture
+drawClearButton = drawCell (Empty) 
+                      (fromIntegral (trnpX - 1 * cellSize))
+                      (fromIntegral (trnpY - 3 * cellSize))
+                      (3 * cellSize) (cellSize)
+               <> translate 
+                      (fromIntegral ((trnpX - 1 * cellSize)-(cellSize)))
+                      (fromIntegral ((trnpY - 3 * cellSize)-(div cellSize 4)))                
+                          (scale (0.8*digScl) (0.8*digScl) (text ("CLEAR")))                
                   
 -- =============== EVENTS HANDLER =============================================
 -- select cell in the field ---------------------------------------------------
@@ -252,7 +262,10 @@ handleSelect (f, ms, gs) x y = do
 handleMove :: World -> Float -> Float -> World
 handleMove (f, Selected (row, col), gs) x y = do
     let num = numByXY x y
-    makeMove (f, Selected (row, col), gs) row col num   
+    if (num <= 9) then do
+        makeMove (f, Selected (row, col), gs) row col num   
+    else do 
+        clearCell (f, Selected (row, col), gs) row col 
 handleMove w _ _ = w
 
 -- main handler function ------------------------------------------------------
@@ -260,12 +273,17 @@ handleMove w _ _ = w
 handleWorld :: Event -> World -> World
 handleWorld _ (f, ms, Finished) = (f, ms, Finished)
 handleWorld (EventKey (MouseButton LeftButton) Down _ (x, y)) w = do
-    if (x <= (fromIntegral(tlppX + 9 * cellSize))) 
+    if ((x <= (fromIntegral(tlppX + 9 * cellSize))) &&
+        (y >= (fromIntegral(tlppY - 9* cellSize)))  &&
+        (x >= (fromIntegral tlppX))                 && 
+        (y <= (fromIntegral tlppY)))    
     then do
         handleSelect w x y
     else do 
     if ((x >= (fromIntegral(trppX - 3 * cellSize))) && 
-        (y >= (fromIntegral(trppY - 3 * cellSize)))) 
+        (y >= (fromIntegral(trppY - 4 * cellSize))) &&
+        (x <= (fromIntegral trppX))                 && 
+        (y <= fromIntegral trppY)) 
     then do
         handleMove w x y
     else do
