@@ -26,6 +26,12 @@ tlppY = div winHeight 2  -- top left pixel position (Y)
 trppX = div winWidth 2   -- top right pixel position (X)
 trppY = div winHeight 2  -- top right pixel position (Y)
 
+blppX = tlppX            -- bottom left pixel position (X)
+blppY = - tlppY          -- bottom left pixel position (Y)
+
+brppX = trppX            -- bottom right pixel position (X)
+brppY = - trppY          -- bottom right pixel position (Y)
+
 cellSize :: Int
 cellSize = div winHeight 9  
 
@@ -35,7 +41,7 @@ tlcpX = (div cellSize 2) - (div winWidth 2)
 tlcpY :: Int -- top left cell position (Y)
 tlcpY = - (div cellSize 2) + (div winHeight 2)
 
-trnpX :: Int-- top right number position (X)
+trnpX :: Int -- top right number position (X)
 trnpX = (div winWidth 2) - (div cellSize 2)
  
 trnpY :: Int -- top right number position (Y)
@@ -79,35 +85,113 @@ numByXY x y = do
 -- =============== DRAWING FUCTIONS ===========================================
 -- world ----------------------------------------------------------------------         
 drawWorld :: World -> Picture
-drawWorld (f, ms, Finished) = drawFinish
-drawWorld (f, ms, gs) = drawField f ms 
-                     <> drawNumberpad 
-                     <> drawMoveState ms 
-                     <> drawInfo
-                     
--- info -----------------------------------------------------------------------
-drawInfo :: Picture
-drawInfo = translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
-                             (fromIntegral (0)) 
-                       (scale (0.4 * digScl) (0.4 * digScl) 
-                           (text ("Select a cell that you want")))
-        <> translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
-                             (fromIntegral (-div cellSize 2)) 
-                       (scale (0.4 * digScl) (0.4 * digScl)                            
-                             (text ("to (re)fill by mouse click.")))
-        <> translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
-                             (fromIntegral (-cellSize)) 
-                       (scale (0.4 * digScl) (0.4 * digScl) 
-                             (text ("Then choose a digit")))
-        <> translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
-                             (fromIntegral (-div (3*cellSize) 2)) 
-                       (scale (0.4 * digScl) (0.4 * digScl)                              
-                             (text ("from the numberpad")))
+drawWorld (f, ms, Finished, t) = drawFinish <> drawFinishTime t
+drawWorld (f, ms, ShowInfo, t) = drawInfo
+                              <> drawTime t
+drawWorld (f, ms, gs, t) = drawField f ms 
+                        <> drawNumberpad 
+                        <> drawMoveState ms 
+                        <> drawInfoSuggest
+                        <> drawTime t
 
+-- time -----------------------------------------------------------------------
+drawTime :: Float -> Picture
+drawTime t = translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
+                       (fromIntegral(brppY + 5))
+                           (color (blue)
+                               (scale (0.5 * digScl) (0.5 * digScl)
+                                   (text("time:"))))
+          <> translate (fromIntegral(tlppX + 10 * cellSize + 10)) 
+                       (fromIntegral(brppY + 5))
+                           (color (blue)
+                               (scale (0.5 * digScl) (0.5 * digScl)
+                                   (text((show min)++
+                                         " min "++
+                                         (show sec)++
+                                         " sec"))))                                   
+    where 
+        s = floor t
+        min = div s 60
+        sec = mod s 60
+
+drawFinishTime :: Float -> Picture
+drawFinishTime t = translate (fromIntegral(-4 * cellSize)) 
+                             (fromIntegral(0))
+                       (color (blue)
+                           (scale (digScl) (digScl)
+                               (text("time:"))))
+                <> translate (fromIntegral(- cellSize)) 
+                             (fromIntegral(0))
+                           (color (blue)
+                               (scale (digScl) (digScl)
+                                   (text((show min)++
+                                         " min "++
+                                         (show sec)++
+                                         " sec"))))                                   
+    where 
+        s = floor t
+        min = div s 60
+        sec = mod s 60         
+                        
+-- info -----------------------------------------------------------------------
+drawInfoSuggest :: Picture
+drawInfoSuggest = translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
+                             (fromIntegral (brppY + 3* div cellSize 2)) 
+                       (scale (0.4 * digScl) (0.4 * digScl) 
+                           (text ("Press F1 to show Info")))
+
+drawInfo :: Picture
+drawInfo = drawHeadline
+        <> drawHowToPlay 
+        <> drawCloseInfo        
+
+drawHeadline :: Picture
+drawHeadline = translate (fromIntegral tlppX) 
+                         (fromIntegral (tlppY - div cellSize 2))
+                   (scale (digScl) (digScl)
+                       (text "========================"))                   
+            <> translate (fromIntegral (tlppX + 5 * cellSize)) 
+                         (0.9 * fromIntegral (tlppY - cellSize))
+                   (scale (1.2 * digScl) (1.2 * digScl)
+                       (text "SUDOKU"))  
+            <> translate (fromIntegral tlppX) 
+                         (fromIntegral (tlppY - 2 * cellSize))
+                   (scale (digScl) (digScl)
+                       (text "========================"))  
+
+drawHowToPlay :: Picture
+drawHowToPlay = translate (fromIntegral(tlppX + div cellSize 2)) 
+                          (fromIntegral (tlppY - 3 * cellSize)) 
+                       (scale (0.5*digScl) (0.5*digScl) 
+                           (text ("Select a cell that you want to " ++
+                                  "(re)fill by mouse click.")))
+             <> translate (fromIntegral(tlppX + div cellSize 2)) 
+                          (fromIntegral (tlppY - div (7 * cellSize) 2)) 
+                       (scale (0.5*digScl) (0.5*digScl) 
+                             (text ("Then choose a digit " ++ 
+                                    "from the numberpad.")))
+             <> translate (fromIntegral(tlppX + div cellSize 2)) 
+                          (fromIntegral (tlppY - 9 * div cellSize 2)) 
+                       (scale (0.5*digScl) (0.5*digScl) 
+                             (text ("Right mouse click on a cell " ++ 
+                                    "will show possible numbers.")))                                    
+             <> translate (fromIntegral(tlppX + div cellSize 2)) 
+                          (fromIntegral (tlppY - 11 * div cellSize 2)) 
+                       (scale (0.4*digScl) (0.4*digScl) 
+                             (text ("You can use either keyboard " ++ 
+                                    "(numbers + space) or the given numpad.")))
+                                    
+drawCloseInfo :: Picture
+drawCloseInfo = translate (fromIntegral (blppX + div cellSize 2))
+                          (fromIntegral (blppY + 5))
+                    (scale (0.5*digScl) (0.5*digScl)
+                        (text "Press F1 to close Info"))                    
+                                    
 -- game over ------------------------------------------------------------------
 drawFinish :: Picture
-drawFinish = translate (fromIntegral (- div winWidth 4)) 0 
-                                  (scale (2 * digScl) (2 * digScl) 
+drawFinish = translate (fromIntegral (-5 * div cellSize 2)) 
+                       (fromIntegral (2 * cellSize)) 
+                                  (scale (1.5 * digScl) (1.5 * digScl) 
                                       (text "YOU WIN"))
 
 -- selected cell overlay ------------------------------------------------------                                      
@@ -118,22 +202,56 @@ drawSelectedCell srow scol = pictures [color green
                                            (cellPosY srow) 
                                            (cellSize) 
                                            (cellSize))    ]       
+
+-- hint -----------------------------------------------------------------------
+drawHint :: Field -> Int -> Int -> Picture
+drawHint f hrow hcol = drawSelectedCell hrow hcol
+                    <> translate (fromIntegral(tlppX + 9 * cellSize + 5))
+                                 (fromIntegral (0))
+                           (color (dark green)
+                               (scale (0.45 * digScl) (0.45 * digScl)
+                                   (text "Possible for selected cell:")) )                          
+                    <> translate (fromIntegral(tlppX + 9 * cellSize + 5))
+                                 (fromIntegral (-div cellSize 2))
+                           (color (dark green) 
+                               (scale (0.45 * digScl) (0.45 * digScl)
+                                   (text (show (getHint f hrow hcol)))))
+    
                                            
--- move results in bottom right corner ----------------------------------------                                      
+-- move results ---------------------------------------------------------------                                      
 drawMoveState :: MoveState -> Picture
 drawMoveState ms = translate (fromIntegral(tlppX + 9 * cellSize + 5)) 
-                             (fromIntegral (-3 * cellSize)) 
+                             (fromIntegral (-2 * cellSize)) 
                        (scale (0.4 * digScl) (0.4 * digScl) 
                            (text (show ms)))
 
 -- field ----------------------------------------------------------------------                           
 drawField :: Field -> MoveState -> Picture
 drawField f (Selected (srow, scol)) = drawAllCells f 
-                                   <> drawSelectedCell srow scol
                                    <> drawLines
+                                   <> drawGrid
+                                   <> drawSelectedCell srow scol
+                                   
+drawField f (Hint (hrow, hcol)) = drawAllCells f
+                               <> drawLines                                   
+                               <> drawGrid
+                               <> drawHint f hrow hcol
+                               
 drawField f _ = drawAllCells f 
              <> drawLines
-                        
+             <> drawGrid
+-- grid ----------------------------------------------------------------------- 
+drawGrid :: Picture
+drawGrid = pictures [(drawCell 
+                            (Empty) 
+                            (cellPosX col) 
+                            (cellPosY row) 
+                            (cellSize) (cellSize)) 
+                           
+                           |
+                                row <- [0,1 ..8],  
+                                col <- [0,1 ..8]] 
+                                
 -- additional lines between 3x3 squares for comfort ---------------------------                      
 drawLines :: Picture
 drawLines = line [(fromIntegral (tlppX + (3 * cellSize) + 1), 
@@ -253,45 +371,113 @@ drawClearButton = drawCell (Empty)
 -- =============== EVENTS HANDLER =============================================
 -- select cell in the field ---------------------------------------------------
 handleSelect :: World -> Float -> Float -> World
-handleSelect (f, ms, gs) x y = do
+handleSelect (f, ms, gs, t) x y = do
     let row = rowByY(y) 
     let col = colByX(x)
-    return_same (f, Selected (row, col), gs)
+    let c = getCell f row col 
+    if (c == (Fixed 0)) then 
+        return_same (f, ms, gs, t)
+    else 
+        return_same (f, Selected (row, col), gs, t)
 
 -- make move ------------------------------------------------------------------    
 handleMove :: World -> Float -> Float -> World
-handleMove (f, Selected (row, col), gs) x y = do
+handleMove (f, Selected (row, col), gs, t) x y = do
     let num = numByXY x y
     if (num <= 9) then do
-        makeMove (f, Selected (row, col), gs) row col num   
+        makeMove (f, Selected (row, col), gs, t) row col num   
     else do 
-        clearCell (f, Selected (row, col), gs) row col 
+        clearCell (f, Selected (row, col), gs, t) row col
+handleMove (f, Hint (row, col), gs, t) x y = do
+    let num = numByXY x y
+    if (num <= 9) then do
+        makeMove (f, Selected (row, col), gs, t) row col num   
+    else do 
+        clearCell (f, Selected (row, col), gs, t) row col         
 handleMove w _ _ = w
 
+-- show hint ------------------------------------------------------------------
+handleHint :: World -> Float -> Float -> World
+handleHint (f,ms,gs,t) x y = do 
+    let row = rowByY(y) 
+    let col = colByX(x)
+    let c = getCell f row col 
+    if (c == (Fixed 0)) then 
+        return_same (f, ms, gs, t)
+    else 
+        return_same (f, Hint (row, col), gs, t)
+
+-- info -----------------------------------------------------------------------
+handleInfo :: World -> World 
+handleInfo (f, ms, ShowInfo, t) = (f, ms, InProgress, t)
+handleInfo (f, ms, gs, t) = (f, ms, ShowInfo, t)
+        
 -- main handler function ------------------------------------------------------
 -- defines what action to do according to mouse click coordinates -------------    
 handleWorld :: Event -> World -> World
-handleWorld _ (f, ms, Finished) = (f, ms, Finished)
+handleWorld _ (f, ms, Finished, t) = (f, ms, Finished, t)
 handleWorld (EventKey (MouseButton LeftButton) Down _ (x, y)) w = do
-    if ((x <= (fromIntegral(tlppX + 9 * cellSize))) &&
-        (y >= (fromIntegral(tlppY - 9* cellSize)))  &&
-        (x >= (fromIntegral tlppX))                 && 
-        (y <= (fromIntegral tlppY)))    
+    if (fieldHit x y)    
     then do
         handleSelect w x y
     else do 
-        if ((x >= (fromIntegral(trppX - 3 * cellSize))) && 
-            (y >= (fromIntegral(trppY - 4 * cellSize))) &&
-            (x <= (fromIntegral trppX))                 && 
-            (y <= fromIntegral trppY)) 
+        if (numpadHit x y) 
         then do
             handleMove w x y
         else do
             return_same w
+handleWorld (EventKey (MouseButton RightButton) Down _ (x, y)) w = do
+    if (fieldHit x y)    
+    then 
+        handleHint w x y
+    else 
+        return_same w   
+handleWorld (EventKey (SpecialKey KeyF1) Down _ _) w = handleInfo w
+
+handleWorld (EventKey (SpecialKey KeySpace) Down _ _) 
+            (f, Selected(row,col), gs, t) = 
+                clearCell (f, Selected (row, col), gs, t) row col 
+handleWorld (EventKey (SpecialKey KeySpace) Down _ _) 
+            (f, Hint(row,col), gs, t) = 
+                clearCell (f, Hint (row, col), gs, t) row col 
+                
+handleWorld (EventKey (Char c) Down _ _)
+            (f, Selected(row,col), gs, t) = 
+                handleChar c (f, Selected(row,col), gs, t)
+handleWorld (EventKey (Char c) Down _ _)
+            (f, Hint(row,col), gs, t) = 
+                handleChar c (f, Hint(row,col), gs, t)
+                
 handleWorld _ w = w    
 
+-------------------------------------------------------------------------------
+handleChar :: Char -> World -> World
+handleChar '0' w = w
+handleChar c (f,Selected(row,col),gs,t) = do 
+    if (isDigit c == True) then 
+        makeMove (f,Selected(row,col),gs,t) row col (ord c - ord '0')
+    else return_same (f,Selected(row,col),gs,t)  
+handleChar c (f,Hint(row,col),gs,t) = do 
+    if (isDigit c == True) then 
+        makeMove (f,Selected(row,col),gs,t) row col (ord c - ord '0')
+    else return_same (f,Hint(row,col),gs,t)  
+handleChar _ w = w   
+ 
+-------------------------------------------------------------------------------
+fieldHit :: Float -> Float -> Bool
+fieldHit x y = (x <= (fromIntegral(tlppX + 9 * cellSize))) &&
+               (y >= (fromIntegral(tlppY - 9* cellSize)))  &&
+               (x >= (fromIntegral tlppX))                 && 
+               (y <= (fromIntegral tlppY)) 
+
+numpadHit :: Float -> Float -> Bool 
+numpadHit x y = (x >= (fromIntegral(trppX - 3 * cellSize))) && 
+                (y >= (fromIntegral(trppY - 4 * cellSize))) &&
+                (x <= (fromIntegral trppX))                 && 
+                (y <= fromIntegral trppY)                
 
 -- =============== UPDATE FUNCTION ============================================
 -- do not need it -------------------------------------------------------------
 updateWorld :: Float -> World -> World
-updateWorld _ = id                    
+updateWorld time (f,ms,InProgress,t) = (f,ms,InProgress,t+time)
+updateWorld _ w = w                    

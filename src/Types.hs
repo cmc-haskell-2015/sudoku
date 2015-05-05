@@ -34,19 +34,22 @@ printField_r (x:xs) = do
     printField_r xs
 
 -- MOVE -----------------------------------------------------------------------
-data MoveState = Ok | ErrFixed | ErrImpossible | Selected (Int,Int)
+data MoveState = Ok | ErrFixed | ErrImpossible | 
+                 Selected (Int,Int) | Hint (Int,Int)
 instance Show MoveState where
     show Ok            = "Successful move"
     show ErrImpossible = "Impossible move: intersection"
     show ErrFixed      = "Can not refill fixed cell"
     show (Selected _)  = ""
+    show (Hint _)      = "" 
     
 -- GAME -----------------------------------------------------------------------    
-data GameState = Finished | InProgress | Error deriving Eq
+data GameState = Finished | InProgress | ShowInfo | Error deriving Eq
 instance Show GameState where
     show Finished   = "You win"
     show InProgress = "The game is not finished yet"
     show Error      = "Something went wrong :c"
+    show ShowInfo   = "Info" 
     
 -- WORLD ----------------------------------------------------------------------    
-type World = (Field, MoveState, GameState)
+type World = (Field, MoveState, GameState, Float)

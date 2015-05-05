@@ -23,18 +23,18 @@ main = do
 -- start console game ---------------------------------------------------------
 console :: IO ()
 console = do 
-    (f, ms, gs) <- readWorld
+    (f, ms, gs, t) <- readWorld
     if (gs == InProgress) then 
-        playGame (f, ms, gs)
+        playGame (f, ms, gs, t)
     else
         print gs
                    
 -- start game with graphics ---------------------------------------------------                 
 interface :: IO ()
 interface = do
-    (f, ms, gs) <- readWorld
+    (f, ms, gs, t) <- readWorld
     if (gs == InProgress) then do 
-        play display bgColor fps (f, ms, gs) drawWorld handleWorld updateWorld       
+        play display bgColor fps (f,ms,gs,t) drawWorld handleWorld updateWorld       
     else do
         print gs
     where    

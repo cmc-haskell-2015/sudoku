@@ -12,7 +12,7 @@ readWorld = do
     print "Enter file name: "
     file <- getLine
     readFromFile file
---  readFromFile "sud.txt"
+--    readFromFile "sud.txt"
 
 -- read the game from file and start it ---------------------------------------
 readFromFile :: FilePath -> IO World
@@ -20,9 +20,9 @@ readFromFile file = do
     strList <- lines <$> readFile file
     let f = (createField strList)    
     if ((checkField f == True) && (checkFinished f == False)) then     
-        return (f, Ok, InProgress)
+        return (f, Ok, InProgress, 0)
     else
-        return ([], Ok, Error)
+        return ([], Ok, Error, 0)
 
 -- transform file contents into field representation --------------------------
 createField :: [String] -> Field
@@ -49,4 +49,4 @@ initField = [[Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty],
              [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty]]
                  
 initWorld :: World
-initWorld = (initField, Ok, InProgress)                   
+initWorld = (initField, Ok, InProgress, 0)                   
