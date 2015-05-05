@@ -280,14 +280,14 @@ handleWorld (EventKey (MouseButton LeftButton) Down _ (x, y)) w = do
     then do
         handleSelect w x y
     else do 
-    if ((x >= (fromIntegral(trppX - 3 * cellSize))) && 
-        (y >= (fromIntegral(trppY - 4 * cellSize))) &&
-        (x <= (fromIntegral trppX))                 && 
-        (y <= fromIntegral trppY)) 
-    then do
-        handleMove w x y
-    else do
-        return_same w
+        if ((x >= (fromIntegral(trppX - 3 * cellSize))) && 
+            (y >= (fromIntegral(trppY - 4 * cellSize))) &&
+            (x <= (fromIntegral trppX))                 && 
+            (y <= fromIntegral trppY)) 
+        then do
+            handleMove w x y
+        else do
+            return_same w
 handleWorld _ w = w    
 
 
