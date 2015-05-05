@@ -47,16 +47,16 @@ playMove (f0, ms0, gs0, t) = do
 makeMove :: World -> Int -> Int -> Int -> World               
 makeMove (f0, ms0, gs0, t) row col num = do
     let c = getCell f0 row col
-    if (c == (Fixed 0)) then do
-        return_same (f0, ErrFixed, gs0, t)
-    else do        
-        let f1 = fillCell f0 row col num
-        let chk = checkFill f1 row col 
-        if (chk == True) then do
-            let gs1 = getGameState f1
-            return_same (f1, Ok, gs1, t)
-        else do 
-            return_same (f0, ErrImpossible, gs0, t)    
+--    if (c == (Fixed 0)) then do
+--        return_same (f0, ErrFixed, gs0, t)
+--    else do        
+    let f1 = fillCell f0 row col num
+--        let chk = checkFill f1 row col 
+--        if (chk == True) then do
+    let gs1 = getGameState f1
+    return_same (f1, Selected(row,col), gs1, t)
+--        else do 
+--            return_same (f0, ErrImpossible, gs0, t)    
 
 -- returns current game state -------------------------------------------------
 getGameState :: Field -> GameState
@@ -86,8 +86,8 @@ clearCell (f0,ms0,gs0,t) row col = do
                         (((take col (f0 !! row)) ++ 
                         ((Empty) : drop (col+1) (f0 !! row))) : 
                      (drop (row+1) f0))), 
-                     Ok, 
-                     gs0,t)
+                     Selected(row,col), 
+                     InProgress,t)
                             
 -- put <num> digit in (<row>, <col>) cell on the field ------------------------                 
 fillCell :: Field -> Int -> Int -> Int -> Field

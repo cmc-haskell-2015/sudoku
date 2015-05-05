@@ -88,6 +88,13 @@ drawWorld :: World -> Picture
 drawWorld (f, ms, Finished, t) = drawFinish <> drawFinishTime t
 drawWorld (f, ms, ShowInfo, t) = drawInfo
                               <> drawTime t
+drawWorld (f, ms, Error, t) = drawField f ms 
+                        <> drawNumberpad 
+                        <> drawMoveState ms 
+                        <> drawInfoSuggest
+                        <> drawTime t
+                        <> drawError
+                    
 drawWorld (f, ms, gs, t) = drawField f ms 
                         <> drawNumberpad 
                         <> drawMoveState ms 
@@ -172,14 +179,14 @@ drawHowToPlay = translate (fromIntegral(tlppX + div cellSize 2))
                                     "from the numberpad.")))
              <> translate (fromIntegral(tlppX + div cellSize 2)) 
                           (fromIntegral (tlppY - 9 * div cellSize 2)) 
-                       (scale (0.5*digScl) (0.5*digScl) 
-                             (text ("Right mouse click on a cell " ++ 
-                                    "will show possible numbers.")))                                    
+                       (scale (0.4*digScl) (0.4*digScl) 
+                             (text ("Right mouse click (or press 'h') " ++ 
+                                    "on a cell will show possible numbers.")))                                    
              <> translate (fromIntegral(tlppX + div cellSize 2)) 
                           (fromIntegral (tlppY - 11 * div cellSize 2)) 
-                       (scale (0.4*digScl) (0.4*digScl) 
+                       (scale (0.35*digScl) (0.35*digScl) 
                              (text ("You can use either keyboard " ++ 
-                                    "(numbers + space) or the given numpad.")))
+                                    "(arrows + numbers + space) or the given numpad.")))
                                     
 drawCloseInfo :: Picture
 drawCloseInfo = translate (fromIntegral (blppX + div cellSize 2))
@@ -203,19 +210,38 @@ drawSelectedCell srow scol = pictures [color green
                                            (cellSize) 
                                            (cellSize))    ]       
 
+-- error ----------------------------------------------------------------------
+drawError :: Picture
+drawError = translate (fromIntegral(tlppX + 9 * cellSize + 5))
+                      (fromIntegral (0))
+                (color (dark red)
+                    (scale (0.45 * digScl) (0.45 * digScl)
+                        (text "Smth wrong")) )                          
+         <> translate (fromIntegral(tlppX + 9 * cellSize + 5))
+                      (fromIntegral (-div cellSize 2))
+                (color (dark red) 
+                    (scale (0.45 * digScl) (0.45 * digScl)
+                        (text "check for errors")))                                            
+                                           
 -- hint -----------------------------------------------------------------------
 drawHint :: Field -> Int -> Int -> Picture
-drawHint f hrow hcol = drawSelectedCell hrow hcol
-                    <> translate (fromIntegral(tlppX + 9 * cellSize + 5))
-                                 (fromIntegral (0))
-                           (color (dark green)
-                               (scale (0.45 * digScl) (0.45 * digScl)
-                                   (text "Possible for selected cell:")) )                          
-                    <> translate (fromIntegral(tlppX + 9 * cellSize + 5))
-                                 (fromIntegral (-div cellSize 2))
-                           (color (dark green) 
-                               (scale (0.45 * digScl) (0.45 * digScl)
-                                   (text (show (getHint f hrow hcol)))))
+drawHint f hrow hcol = do
+    let hint = getHint f hrow hcol
+    if (hint /= []) then do
+        drawSelectedCell hrow hcol
+        <> translate (fromIntegral(tlppX + 9 * cellSize + 5))
+                     (fromIntegral (0))
+               (color (dark green)
+                   (scale (0.45 * digScl) (0.45 * digScl)
+                       (text "Possible for selected cell:")) )                          
+        <> translate (fromIntegral(tlppX + 9 * cellSize + 5))
+                     (fromIntegral (-div cellSize 2))
+               (color (dark green) 
+                   (scale (0.45 * digScl) (0.45 * digScl)
+                       (text (show (getHint f hrow hcol)))))
+    else do
+        drawSelectedCell hrow hcol
+        <> drawError    
     
                                            
 -- move results ---------------------------------------------------------------                                      
@@ -440,14 +466,27 @@ handleWorld (EventKey (SpecialKey KeySpace) Down _ _)
 handleWorld (EventKey (SpecialKey KeySpace) Down _ _) 
             (f, Hint(row,col), gs, t) = 
                 clearCell (f, Hint (row, col), gs, t) row col 
-                
+  
+handleWorld (EventKey (Char 'h') Down _ _)
+            (f, Selected(row,col), gs, t) = 
+                (f, Hint(row,col), gs, t) 
+  
 handleWorld (EventKey (Char c) Down _ _)
             (f, Selected(row,col), gs, t) = 
                 handleChar c (f, Selected(row,col), gs, t)
 handleWorld (EventKey (Char c) Down _ _)
             (f, Hint(row,col), gs, t) = 
                 handleChar c (f, Hint(row,col), gs, t)
-                
+
+handleWorld (EventKey (SpecialKey KeyRight) Down _ _) w = 
+                handleRight w  
+handleWorld (EventKey (SpecialKey KeyLeft) Down _ _) w = 
+                handleLeft w 
+handleWorld (EventKey (SpecialKey KeyUp) Down _ _) w = 
+                handleUp w 
+handleWorld (EventKey (SpecialKey KeyDown) Down _ _) w = 
+                handleDown w 
+              
 handleWorld _ w = w    
 
 -------------------------------------------------------------------------------
@@ -462,7 +501,94 @@ handleChar c (f,Hint(row,col),gs,t) = do
         makeMove (f,Selected(row,col),gs,t) row col (ord c - ord '0')
     else return_same (f,Hint(row,col),gs,t)  
 handleChar _ w = w   
- 
+-------------------------------------------------------------------------------
+handleRight :: World -> World
+handleRight (f,Selected(row0,col0),gs,t) = do
+    let (row1, col1) = closestRight f row0 col0 
+    if (col1 == 9) then 
+        return_same (f, Selected(row0,col0),gs,t)
+    else
+        return_same (f, Selected(row1,col1),gs,t) 
+handleRight (f,Hint(row0,col0),gs,t) = do
+    let (row1, col1) = closestRight f row0 col0 
+    if (col1 == 9) then 
+        return_same (f, Selected(row0,col0),gs,t)
+    else
+        return_same (f, Selected(row1,col1),gs,t)
+handleRight (f, ms, gs, t) = (f, Selected(0,0), gs, t)       
+-------------------------------------------------------------------------------
+closestRight :: Field -> Int -> Int -> (Int, Int)
+closestRight f row col | ((col == 8) && (getCell f row col == (Fixed 0))) 
+                             = (row,9)
+                       | ((col <= 7) && (getCell f row (col+1) == (Fixed 0))) 
+                             = closestRight f row (col+1) 
+                       | otherwise = (row, col+1)
+-------------------------------------------------------------------------------
+handleLeft :: World -> World
+handleLeft (f,Selected(row0,col0),gs,t) = do
+    let (row1, col1) = closestLeft f row0 col0 
+    if (col1 == -1) then 
+        return_same (f, Selected(row0,col0),gs,t)
+    else
+        return_same (f, Selected(row1,col1),gs,t) 
+handleLeft (f,Hint(row0,col0),gs,t) = do
+    let (row1, col1) = closestLeft f row0 col0 
+    if (col1 == -1) then 
+        return_same (f, Selected(row0,col0),gs,t)
+    else
+        return_same (f, Selected(row1,col1),gs,t)
+handleLeft (f, ms, gs, t) = (f, Selected(0,0), gs, t)       
+-------------------------------------------------------------------------------
+closestLeft :: Field -> Int -> Int -> (Int, Int)
+closestLeft f row col | ((col == 0) && (getCell f row col == (Fixed 0))) 
+                             = (row,-1)
+                       | ((col >= 1) && (getCell f row (col-1) == (Fixed 0))) 
+                             = closestLeft f row (col-1) 
+                       | otherwise = (row, col-1)          
+-------------------------------------------------------------------------------
+handleUp :: World -> World
+handleUp (f,Selected(row0,col0),gs,t) = do
+    let (row1, col1) = closestUp f row0 col0 
+    if (row1 == -1) then 
+        return_same (f, Selected(row0,col0),gs,t)
+    else
+        return_same (f, Selected(row1,col1),gs,t) 
+handleUp (f,Hint(row0,col0),gs,t) = do
+    let (row1, col1) = closestUp f row0 col0 
+    if (row1 == -1) then 
+        return_same (f, Selected(row0,col0),gs,t)
+    else
+        return_same (f, Selected(row1,col1),gs,t)
+handleUp (f, ms, gs, t) = (f, Selected(0,0), gs, t)       
+-------------------------------------------------------------------------------
+closestUp :: Field -> Int -> Int -> (Int, Int)
+closestUp f row col    | ((row == 0) && (getCell f row col == (Fixed 0))) 
+                             = (-1,col)
+                       | ((row >= 1) && (getCell f (row-1) (col) == (Fixed 0))) 
+                             = closestUp f (row-1) (col) 
+                       | otherwise = (row-1, col)          
+-------------------------------------------------------------------------------
+handleDown :: World -> World
+handleDown (f,Selected(row0,col0),gs,t) = do
+    let (row1, col1) = closestDown f row0 col0 
+    if (row1 == 9) then 
+        return_same (f, Selected(row0,col0),gs,t)
+    else
+        return_same (f, Selected(row1,col1),gs,t) 
+handleDown (f,Hint(row0,col0),gs,t) = do
+    let (row1, col1) = closestDown f row0 col0 
+    if (row1 == 9) then 
+        return_same (f, Selected(row0,col0),gs,t)
+    else
+        return_same (f, Selected(row1,col1),gs,t)
+handleDown (f, ms, gs, t) = (f, Selected(0,0), gs, t)       
+-------------------------------------------------------------------------------
+closestDown :: Field -> Int -> Int -> (Int, Int)
+closestDown f row col  | ((row == 8) && (getCell f row col == (Fixed 0))) 
+                             = (9,col)
+                       | ((row <= 7) && (getCell f (row+1) (col) == (Fixed 0))) 
+                             = closestDown f (row+1) (col) 
+                       | otherwise = (row+1, col)                                                      
 -------------------------------------------------------------------------------
 fieldHit :: Float -> Float -> Bool
 fieldHit x y = (x <= (fromIntegral(tlppX + 9 * cellSize))) &&
@@ -480,4 +606,5 @@ numpadHit x y = (x >= (fromIntegral(trppX - 3 * cellSize))) &&
 -- do not need it -------------------------------------------------------------
 updateWorld :: Float -> World -> World
 updateWorld time (f,ms,InProgress,t) = (f,ms,InProgress,t+time)
+updateWorld time (f,ms,Error,t) = (f,ms,Error,t+time)
 updateWorld _ w = w                    
