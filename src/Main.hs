@@ -12,10 +12,11 @@ import Data.Monoid
 
 import Graphics.Gloss.Interface.Pure.Game
 
+
 -- =============== MAIN FUNCTION ==============================================
 main :: IO()
 main = do
-    greetingsMsg
+    putStrLn "Welcome to Sudoku puzzle game" 
     interface  -- start with graphics
     -- console -- start in console    
 -- ============================================================================

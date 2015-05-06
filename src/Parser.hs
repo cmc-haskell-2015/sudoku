@@ -7,9 +7,12 @@ import Data.Functor
 import Data.Char
 import Data.String
 
+import System.IO
+
 readWorld :: IO World
 readWorld = do
-    print "Enter file name: "
+    putStr "Enter file name: "
+    hFlush stdout
     file <- getLine
     readFromFile file
 --    readFromFile "sud.txt"
