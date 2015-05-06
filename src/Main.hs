@@ -24,21 +24,19 @@ main = do
 -- start console game ---------------------------------------------------------
 console :: IO ()
 console = do 
-    (f, ms, gs, t) <- readWorld
-    if (gs == InProgress) then 
-        playGame (f, ms, gs, t)
-    else
-        print gs
-                   
+    w <- readWorld
+    case gameState w of
+      InProgress -> playGame w
+      gs -> print gs
+
 -- start game with graphics ---------------------------------------------------                 
 interface :: IO ()
 interface = do
-    (f, ms, gs, t) <- readWorld
-    if (gs == InProgress) then do 
-        play display bgColor fps (f,ms,gs,t) drawWorld handleWorld updateWorld       
-    else do
-        print gs
-    where    
+    w <- readWorld
+    case gameState w of
+      InProgress -> play display bgColor fps w drawWorld handleWorld updateWorld       
+      gs -> print gs
+    where
         windowSize = (winWidth, winHeight)
         windowOffset = (200, 200)
         display = InWindow "BEST SUDOKU EVAR" windowSize windowOffset

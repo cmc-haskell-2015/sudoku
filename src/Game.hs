@@ -1,5 +1,8 @@
 module Game where
+
 import Types
+import Control.Applicative
+import Data.List
         
 -- =============== AUXILIARY FUNCTIONS ========================================        
 -- to be used in 'do'-blocks --------------------------------------------------
@@ -16,47 +19,39 @@ isIn (x:xs) y | y == x = True
 centerInd :: Int -> Int
 centerInd i = 3 * (div i 3) + 1  
 
-greetingsMsg :: IO ()
-greetingsMsg = print "Welcome to Sudoku puzzle game" 
-
 -- =============== GAME FUNCTIONS =============================================
 -- main game function ---------------------------------------------------------
 playGame :: World -> IO ()
-playGame (f, ms, gs, t) = do
-    if (gs == InProgress) then do 
-        playMove (f, ms, gs, t)
+playGame w@World{ gameState = gs } = do
+    if gs == InProgress then do 
+        playMove w
     else do
         print gs
       
 -- request input for the next move --------------------------------------------
 playMove :: World -> IO ()
-playMove (f0, ms0, gs0, t) = do
-    printField f0
+playMove w = do
+    printField (field w)
     print "Make your next step"
     print "Enter row: "
-    row <- getLine
+    row <- read <$> getLine
     print "Enter col: "
-    col <- getLine
+    col <- read <$> getLine
     print "Enter digit: "
-    num <- getLine
-    let (f1, ms1, gs1, t)=makeMove(f0,ms0,gs0,t)(read row)(read col)(read num)
-    print ms1
-    playGame (f1, ms1, gs1, t)                  
+    num <- read <$> getLine
+    let w' = makeMove w row col num
+    print (moveState w')
+    playGame w'
 
 -- make move: try to fill [num] in ([row],[col]) cell -------------------------          
 makeMove :: World -> Int -> Int -> Int -> World               
-makeMove (f0, ms0, gs0, t) row col num = do
-    let c = getCell f0 row col
---    if (c == (Fixed 0)) then do
---        return_same (f0, ErrFixed, gs0, t)
---    else do        
-    let f1 = fillCell f0 row col num
---        let chk = checkFill f1 row col 
---        if (chk == True) then do
-    let gs1 = getGameState f1
-    return_same (f1, Selected(row,col), gs1, t)
---        else do 
---            return_same (f0, ErrImpossible, gs0, t)    
+makeMove w row col num = return_same w'
+  where
+    f'  = fillCell (field w) row col num
+    w'  = w { field = f'
+            , moveState = Selected (row, col)
+            , gameState = getGameState f'
+            }
 
 -- returns current game state -------------------------------------------------
 getGameState :: Field -> GameState
@@ -77,22 +72,26 @@ modifyRow r col num = (take col r) ++ ((Filled num) : (drop (col+1) r))
 
 -- clear (<row>, <col>) cell --------------------------------------------------
 clearCell :: World -> Int -> Int -> World
-clearCell (f0,ms0,gs0,t) row col = do
-    let c = getCell f0 row col
-    if (c == (Fixed 0)) then do
-        return_same (f0, ErrFixed, gs0,t)
+clearCell w row col = do
+    if isFixed c then do
+        return_same (w { moveState = ErrFixed })
     else do      
-        return_same (((take row f0) ++ 
-                        (((take col (f0 !! row)) ++ 
-                        ((Empty) : drop (col+1) (f0 !! row))) : 
-                     (drop (row+1) f0))), 
-                     Selected(row,col), 
-                     InProgress,t)
-                            
+        return_same (w { field = setCell Empty row col f
+                       , moveState = Selected (row, col)
+                       , gameState = InProgress })
+  where
+    f = field w
+    c = getCell f row col
+
+setCell :: Cell -> Int -> Int -> Field -> Field
+setCell c row col f = left ++ (top ++ c : bottom) : right
+  where
+    (left, mid:right) = splitAt row f
+    (top, _:bottom) = splitAt col mid
+
 -- put <num> digit in (<row>, <col>) cell on the field ------------------------                 
 fillCell :: Field -> Int -> Int -> Int -> Field
-fillCell f row col num = (take row f) ++ 
-                         ((modifyRow (f !! row) col num) : (drop (row+1) f))   
+fillCell f row col num = setCell (Filled num) row col f
 
 -- return cell by its indices -------------------------------------------------                         
 getCell :: Field -> Int -> Int -> Cell

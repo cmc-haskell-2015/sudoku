@@ -15,17 +15,16 @@ readWorld = do
     hFlush stdout
     file <- getLine
     readFromFile file
---    readFromFile "sud.txt"
 
 -- read the game from file and start it ---------------------------------------
 readFromFile :: FilePath -> IO World
 readFromFile file = do
     strList <- lines <$> readFile file
-    let f = (createField strList)    
-    if ((checkField f == True) && (checkFinished f == False)) then     
-        return (f, Ok, InProgress, 0)
+    let f = createField strList
+    if checkField f && not (checkFinished f) then     
+        return (World f Ok InProgress 0)
     else
-        return ([], Ok, Error, 0)
+        return (World [] Ok Error 0)
 
 -- transform file contents into field representation --------------------------
 createField :: [String] -> Field
@@ -50,6 +49,6 @@ initField = [[Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty],
              [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
              [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty], 
              [Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty]]
-                 
+
 initWorld :: World
-initWorld = (initField, Ok, InProgress, 0)                   
+initWorld = World initField Ok InProgress 0

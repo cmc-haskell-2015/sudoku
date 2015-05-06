@@ -12,11 +12,11 @@ import Data.Monoid
 import Graphics.Gloss.Interface.Pure.Game
 
 -- =============== AUXILIARY FUNCTIONS ========================================
-winHeight :: Int -- game window height
+winHeight :: Num a => a -- game window height
 winHeight = 540
 
-winWidth :: Int -- game window width
-winWidth = (winHeight + 3 * cellSize) + 100 -- the second item stands for the
+winWidth :: Num a => a -- game window width
+winWidth = (winHeight + 3 * fromIntegral cellSize) + 100 -- the second item stands for the
                                             -- interval between field 
                                             -- and numberpad
 
@@ -85,21 +85,21 @@ numByXY x y = do
 -- =============== DRAWING FUCTIONS ===========================================
 -- world ----------------------------------------------------------------------         
 drawWorld :: World -> Picture
-drawWorld (f, ms, Finished, t) = drawFinish <> drawFinishTime t
-drawWorld (f, ms, ShowInfo, t) = drawInfo
-                              <> drawTime t
-drawWorld (f, ms, Error, t) = drawField f ms 
-                        <> drawNumberpad 
-                        <> drawMoveState ms 
-                        <> drawInfoSuggest
-                        <> drawTime t
-                        <> drawError
-                    
-drawWorld (f, ms, gs, t) = drawField f ms 
-                        <> drawNumberpad 
-                        <> drawMoveState ms 
-                        <> drawInfoSuggest
-                        <> drawTime t
+drawWorld (World f ms gs t) =
+  case gs of
+    Finished -> drawFinish <> drawFinishTime t
+    ShowInfo -> drawInfo <> drawTime t
+    Error    -> drawField f ms 
+                <> drawNumberpad 
+                <> drawMoveState ms 
+                <> drawInfoSuggest
+                <> drawTime t
+                <> drawError
+    _ -> drawField f ms 
+         <> drawNumberpad 
+         <> drawMoveState ms 
+         <> drawInfoSuggest
+         <> drawTime t
 
 -- time -----------------------------------------------------------------------
 drawTime :: Float -> Picture
@@ -345,44 +345,14 @@ drawAllCells f = pictures [(drawCell
                                 col <- [0,1 ..8]]               
 -- numberpad ------------------------------------------------------------------                  
 drawNumberpad :: Picture
-drawNumberpad = pictures [
-                  drawCell (Filled 1) 
-                      (fromIntegral(trnpX - 2 * cellSize)) 
-                      (fromIntegral trnpY) 
-                      (cellSize) (cellSize),
-                  drawCell (Filled 2) 
-                      (fromIntegral(trnpX - 1 * cellSize)) 
-                      (fromIntegral trnpY)
-                      (cellSize) (cellSize),
-                  drawCell (Filled 3) 
-                      (fromIntegral trnpX) 
-                      (fromIntegral trnpY) 
-                      (cellSize) (cellSize),
-                  drawCell (Filled 4) 
-                      (fromIntegral(trnpX - 2 * cellSize)) 
-                      (fromIntegral(trnpY - 1 * cellSize)) 
-                      (cellSize) (cellSize),
-                  drawCell (Filled 5) 
-                      (fromIntegral(trnpX - 1 * cellSize)) 
-                      (fromIntegral(trnpY - 1 * cellSize)) 
-                      (cellSize) (cellSize),
-                  drawCell (Filled 6) 
-                      (fromIntegral trnpX) 
-                      (fromIntegral(trnpY - 1 * cellSize)) 
-                      (cellSize) (cellSize),
-                  drawCell (Filled 7) 
-                      (fromIntegral(trnpX - 2 * cellSize)) 
-                      (fromIntegral(trnpY - 2 * cellSize)) 
-                      (cellSize) (cellSize),
-                  drawCell (Filled 8) 
-                      (fromIntegral(trnpX - 1 * cellSize)) 
-                      (fromIntegral(trnpY - 2 * cellSize)) 
-                      (cellSize) (cellSize),
-                  drawCell (Filled 9)
-                      (fromIntegral trnpX)
-                      (fromIntegral(trnpY - 2 * cellSize)) 
-                      (cellSize) (cellSize),
-                  drawClearButton                          ]
+drawNumberpad = drawClearButton <> pictures
+  [ drawCell (Filled n) offsetX offsetY cellSize cellSize
+  | (n, (i, j)) <- numbers
+  , let offsetX = fromIntegral (trnpX - i * cellSize)
+  , let offsetY = fromIntegral (trnpY - j * cellSize) ]
+  where
+    numbers = zip [1..9] coords
+    coords  = [ (i, j) | j <- [0..2], i <- [2, 1, 0] ]
 
 drawClearButton :: Picture
 drawClearButton = drawCell (Empty) 
@@ -397,51 +367,52 @@ drawClearButton = drawCell (Empty)
 -- =============== EVENTS HANDLER =============================================
 -- select cell in the field ---------------------------------------------------
 handleSelect :: World -> Float -> Float -> World
-handleSelect (f, ms, gs, t) x y = do
+handleSelect w x y = do
     let row = rowByY(y) 
     let col = colByX(x)
-    let c = getCell f row col 
-    if (c == (Fixed 0)) then 
-        return_same (f, ms, gs, t)
+    let c = getCell (field w) row col 
+    if isFixed c then 
+        return_same w
     else 
-        return_same (f, Selected (row, col), gs, t)
+        return_same w { moveState = Selected (row, col) }
 
 -- make move ------------------------------------------------------------------    
 handleMove :: World -> Float -> Float -> World
-handleMove (f, Selected (row, col), gs, t) x y = do
-    let num = numByXY x y
-    if (num <= 9) then do
-        makeMove (f, Selected (row, col), gs, t) row col num   
-    else do 
-        clearCell (f, Selected (row, col), gs, t) row col
-handleMove (f, Hint (row, col), gs, t) x y = do
-    let num = numByXY x y
-    if (num <= 9) then do
-        makeMove (f, Selected (row, col), gs, t) row col num   
-    else do 
-        clearCell (f, Selected (row, col), gs, t) row col         
-handleMove w _ _ = w
+handleMove w x y =
+  case moveState w of
+    Selected (row, col) -> handleSelectedCell row col
+    Hint     (row, col) -> handleSelectedCell row col
+    _ -> w
+  where
+    handleSelectedCell row col = do
+      let num = numByXY x y
+      if (num <= 9) then do
+          makeMove w { moveState = Selected (row, col) } row col num   
+      else do 
+          clearCell w { moveState = Selected (row, col) } row col
 
 -- show hint ------------------------------------------------------------------
 handleHint :: World -> Float -> Float -> World
-handleHint (f,ms,gs,t) x y = do 
+handleHint w x y = do 
     let row = rowByY(y) 
     let col = colByX(x)
-    let c = getCell f row col 
-    if (c == (Fixed 0)) then 
-        return_same (f, ms, gs, t)
+    let c = getCell (field w) row col 
+    if (isFixed c) then 
+        return_same w
     else 
-        return_same (f, Hint (row, col), gs, t)
+        return_same w { moveState = Hint (row, col) }
 
 -- info -----------------------------------------------------------------------
 handleInfo :: World -> World 
-handleInfo (f, ms, ShowInfo, t) = (f, ms, InProgress, t)
-handleInfo (f, ms, gs, t) = (f, ms, ShowInfo, t)
+handleInfo w =
+  case gameState w of
+    ShowInfo -> w { gameState = InProgress }
+    _        -> w { gameState = ShowInfo }
         
 -- main handler function ------------------------------------------------------
 -- defines what action to do according to mouse click coordinates -------------    
 handleWorld :: Event -> World -> World
-handleWorld _ (f, ms, Finished, t) = (f, ms, Finished, t)
+handleWorld _ w@World{ gameState = Finished } = w
 handleWorld (EventKey (MouseButton LeftButton) Down _ (x, y)) w = do
     if (fieldHit x y)    
     then do
@@ -460,23 +431,16 @@ handleWorld (EventKey (MouseButton RightButton) Down _ (x, y)) w = do
         return_same w   
 handleWorld (EventKey (SpecialKey KeyF1) Down _ _) w = handleInfo w
 
-handleWorld (EventKey (SpecialKey KeySpace) Down _ _) 
-            (f, Selected(row,col), gs, t) = 
-                clearCell (f, Selected (row, col), gs, t) row col 
-handleWorld (EventKey (SpecialKey KeySpace) Down _ _) 
-            (f, Hint(row,col), gs, t) = 
-                clearCell (f, Hint (row, col), gs, t) row col 
+handleWorld (EventKey (SpecialKey KeySpace) Down _ _) w@World{ moveState = Selected (row, col) } = clearCell w row col
+handleWorld (EventKey (SpecialKey KeySpace) Down _ _) w@World{ moveState = Hint     (row, col) } = clearCell w row col
   
-handleWorld (EventKey (Char 'h') Down _ _)
-            (f, Selected(row,col), gs, t) = 
-                (f, Hint(row,col), gs, t) 
+handleWorld (EventKey (Char 'h') Down _ _) w@World{ moveState = Selected s } = w { moveState = Hint s }
   
-handleWorld (EventKey (Char c) Down _ _)
-            (f, Selected(row,col), gs, t) = 
-                handleChar c (f, Selected(row,col), gs, t)
-handleWorld (EventKey (Char c) Down _ _)
-            (f, Hint(row,col), gs, t) = 
-                handleChar c (f, Hint(row,col), gs, t)
+handleWorld (EventKey (Char c) Down _ _) w =
+  case moveState w of
+    Selected _ -> handleChar c w
+    Hint     _ -> handleChar c w
+    _ -> w
 
 handleWorld (EventKey (SpecialKey KeyRight) Down _ _) w = 
                 handleRight w  
@@ -492,102 +456,65 @@ handleWorld _ w = w
 -------------------------------------------------------------------------------
 handleChar :: Char -> World -> World
 handleChar '0' w = w
-handleChar c (f,Selected(row,col),gs,t) = do 
-    if (isDigit c == True) then 
-        makeMove (f,Selected(row,col),gs,t) row col (ord c - ord '0')
-    else return_same (f,Selected(row,col),gs,t)  
-handleChar c (f,Hint(row,col),gs,t) = do 
-    if (isDigit c == True) then 
-        makeMove (f,Selected(row,col),gs,t) row col (ord c - ord '0')
-    else return_same (f,Hint(row,col),gs,t)  
-handleChar _ w = w   
+handleChar c w =
+  case getSelected (moveState w) of
+    Nothing -> w
+    Just (row, col) ->
+      if isDigit c
+        then makeMove w { moveState = Selected (row, col) } row col (ord c - ord '0')
+        else return_same w
+
 -------------------------------------------------------------------------------
 handleRight :: World -> World
-handleRight (f,Selected(row0,col0),gs,t) = do
-    let (row1, col1) = closestRight f row0 col0 
-    if (col1 == 9) then 
-        return_same (f, Selected(row0,col0),gs,t)
-    else
-        return_same (f, Selected(row1,col1),gs,t) 
-handleRight (f,Hint(row0,col0),gs,t) = do
-    let (row1, col1) = closestRight f row0 col0 
-    if (col1 == 9) then 
-        return_same (f, Selected(row0,col0),gs,t)
-    else
-        return_same (f, Selected(row1,col1),gs,t)
-handleRight (f, ms, gs, t) = (f, Selected(0,0), gs, t)       
+handleRight = handleDir closestRight
 -------------------------------------------------------------------------------
 closestRight :: Field -> Int -> Int -> (Int, Int)
-closestRight f row col | ((col == 8) && (getCell f row col == (Fixed 0))) 
+closestRight f row col | ((col == 8) && (isFixed (getCell f row col)))
                              = (row,9)
-                       | ((col <= 7) && (getCell f row (col+1) == (Fixed 0))) 
+                       | ((col <= 7) && (isFixed (getCell f row (col+1))))
                              = closestRight f row (col+1) 
                        | otherwise = (row, col+1)
 -------------------------------------------------------------------------------
 handleLeft :: World -> World
-handleLeft (f,Selected(row0,col0),gs,t) = do
-    let (row1, col1) = closestLeft f row0 col0 
-    if (col1 == -1) then 
-        return_same (f, Selected(row0,col0),gs,t)
-    else
-        return_same (f, Selected(row1,col1),gs,t) 
-handleLeft (f,Hint(row0,col0),gs,t) = do
-    let (row1, col1) = closestLeft f row0 col0 
-    if (col1 == -1) then 
-        return_same (f, Selected(row0,col0),gs,t)
-    else
-        return_same (f, Selected(row1,col1),gs,t)
-handleLeft (f, ms, gs, t) = (f, Selected(0,0), gs, t)       
+handleLeft = handleDir closestLeft
 -------------------------------------------------------------------------------
 closestLeft :: Field -> Int -> Int -> (Int, Int)
-closestLeft f row col | ((col == 0) && (getCell f row col == (Fixed 0))) 
+closestLeft f row col | ((col == 0) && (isFixed (getCell f row col)))
                              = (row,-1)
-                       | ((col >= 1) && (getCell f row (col-1) == (Fixed 0))) 
+                       | ((col >= 1) && (isFixed (getCell f row (col-1))))
                              = closestLeft f row (col-1) 
                        | otherwise = (row, col-1)          
 -------------------------------------------------------------------------------
 handleUp :: World -> World
-handleUp (f,Selected(row0,col0),gs,t) = do
-    let (row1, col1) = closestUp f row0 col0 
-    if (row1 == -1) then 
-        return_same (f, Selected(row0,col0),gs,t)
-    else
-        return_same (f, Selected(row1,col1),gs,t) 
-handleUp (f,Hint(row0,col0),gs,t) = do
-    let (row1, col1) = closestUp f row0 col0 
-    if (row1 == -1) then 
-        return_same (f, Selected(row0,col0),gs,t)
-    else
-        return_same (f, Selected(row1,col1),gs,t)
-handleUp (f, ms, gs, t) = (f, Selected(0,0), gs, t)       
+handleUp = handleDir closestUp
 -------------------------------------------------------------------------------
 closestUp :: Field -> Int -> Int -> (Int, Int)
-closestUp f row col    | ((row == 0) && (getCell f row col == (Fixed 0))) 
+closestUp f row col    | ((row == 0) && (isFixed (getCell f row col)))
                              = (-1,col)
-                       | ((row >= 1) && (getCell f (row-1) (col) == (Fixed 0))) 
+                       | ((row >= 1) && (isFixed (getCell f (row-1) (col))))
                              = closestUp f (row-1) (col) 
                        | otherwise = (row-1, col)          
 -------------------------------------------------------------------------------
 handleDown :: World -> World
-handleDown (f,Selected(row0,col0),gs,t) = do
-    let (row1, col1) = closestDown f row0 col0 
-    if (row1 == 9) then 
-        return_same (f, Selected(row0,col0),gs,t)
-    else
-        return_same (f, Selected(row1,col1),gs,t) 
-handleDown (f,Hint(row0,col0),gs,t) = do
-    let (row1, col1) = closestDown f row0 col0 
-    if (row1 == 9) then 
-        return_same (f, Selected(row0,col0),gs,t)
-    else
-        return_same (f, Selected(row1,col1),gs,t)
-handleDown (f, ms, gs, t) = (f, Selected(0,0), gs, t)       
+handleDown = handleDir closestDown
+
+handleDir :: (Field -> Int -> Int -> (Int, Int)) -> World -> World
+handleDir closest w =
+  case getSelected (moveState w) of
+    Nothing -> w { moveState = Selected (0, 0) }
+    Just (row, col) ->
+      let (row', col') = closest (field w) row col
+      in if check row' col'
+          then w { moveState = Selected (row', col') }
+          else w { moveState = Selected (row, col) }
+  where
+    check row col = row >= 0 && row < 9 && col >= 0 && col < 9
 -------------------------------------------------------------------------------
 closestDown :: Field -> Int -> Int -> (Int, Int)
-closestDown f row col  | ((row == 8) && (getCell f row col == (Fixed 0))) 
+closestDown f row col  | row == 8 && isFixed (getCell f row col)
                              = (9,col)
-                       | ((row <= 7) && (getCell f (row+1) (col) == (Fixed 0))) 
-                             = closestDown f (row+1) (col) 
+                       | row <= 7 && isFixed (getCell f (row+1) col)
+                             = closestDown f (row+1) col
                        | otherwise = (row+1, col)                                                      
 -------------------------------------------------------------------------------
 fieldHit :: Float -> Float -> Bool
@@ -605,6 +532,11 @@ numpadHit x y = (x >= (fromIntegral(trppX - 3 * cellSize))) &&
 -- =============== UPDATE FUNCTION ============================================
 -- do not need it -------------------------------------------------------------
 updateWorld :: Float -> World -> World
-updateWorld time (f,ms,InProgress,t) = (f,ms,InProgress,t+time)
-updateWorld time (f,ms,Error,t) = (f,ms,Error,t+time)
-updateWorld _ w = w                    
+updateWorld dt w =
+  case gameState w of
+    InProgress -> incTime w
+    Error      -> incTime w
+    _          -> w
+  where
+    incTime w = w { totalTime = totalTime w + dt}
+

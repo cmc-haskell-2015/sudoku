@@ -8,14 +8,10 @@ instance Show Cell where
     show (Fixed n)  = show n
     show (Filled n) = show n
 
-instance Eq Cell where
-    (Fixed n1)  == (Fixed 0)   = True
-    (Filled n1) == (Filled 0)  = True 
-    (Fixed n1)  == (Fixed n2)  = (n1 == n2)
-    (Filled n1) == (Filled n2) = (n1 == n2)
-    (Empty)     == (Empty)     = True
-    _           == _           = False  
-        
+isFixed :: Cell -> Bool
+isFixed (Fixed _) = True
+isFixed _ = False
+
 -- FIELD ----------------------------------------------------------------------  
 type Field = [[Cell]]
 
@@ -42,7 +38,18 @@ instance Show MoveState where
     show ErrFixed      = "Can not refill fixed cell"
     show (Selected _)  = ""
     show (Hint _)      = "" 
-    
+
+getSelected :: MoveState -> Maybe (Int, Int)
+getSelected (Selected s) = Just s
+getSelected (Hint     s) = Just s
+getSelected _ = Nothing
+
+isSelected :: MoveState -> Bool
+isSelected ms =
+  case getSelected ms of
+    Nothing -> False
+    Just _  -> True
+
 -- GAME -----------------------------------------------------------------------    
 data GameState = Finished | InProgress | ShowInfo | Error deriving Eq
 instance Show GameState where
@@ -50,6 +57,13 @@ instance Show GameState where
     show InProgress = "The game is not finished yet"
     show Error      = "Something went wrong :c"
     show ShowInfo   = "Info" 
-    
+
 -- WORLD ----------------------------------------------------------------------    
-type World = (Field, MoveState, GameState, Float)
+data World = World
+  { field     :: Field      -- ^ sudoku grid
+  , moveState :: MoveState  -- ^ ???
+  , gameState :: GameState  -- ^ global game state
+  , totalTime :: Float      -- ^ total time spent on the puzzle
+  }
+
+
