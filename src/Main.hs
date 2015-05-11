@@ -12,33 +12,23 @@ import Data.Monoid
 
 import Graphics.Gloss.Interface.Pure.Game
 
-
 -- =============== MAIN FUNCTION ==============================================
 main :: IO()
 main = do
     putStrLn "Welcome to Sudoku puzzle game" 
-    interface  -- start with graphics
-    -- console -- start in console    
--- ============================================================================
-
--- start console game ---------------------------------------------------------
-console :: IO ()
-console = do 
-    w <- readWorld
-    case gameState w of
-      InProgress -> playGame w
-      gs -> print gs
-
--- start game with graphics ---------------------------------------------------                 
+    interface  
+    
+-- graphics user interface ----------------------------------------------------                 
 interface :: IO ()
 interface = do
     w <- readWorld
     case gameState w of
-      InProgress -> play display bgColor fps w drawWorld handleWorld updateWorld       
-      gs -> print gs
+        InProgress -> play display bgColor fps w 
+                           drawWorld handleWorld updateWorld       
+        gs -> putStrLn "Incorrect input file"
     where
-        windowSize = (winWidth, winHeight)
+        windowSize = (floor winWidth, floor winHeight)
         windowOffset = (200, 200)
         display = InWindow "BEST SUDOKU EVAR" windowSize windowOffset
         bgColor = white
-        fps = 60     
+        fps = 60
