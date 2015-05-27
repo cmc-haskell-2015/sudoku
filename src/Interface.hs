@@ -9,7 +9,7 @@ import Data.Char
 import Data.String
 import Data.Monoid 
 
-import Graphics.Gloss.Interface.Pure.Game
+import Graphics.Gloss.Interface.IO.Game
 
 -- =============== AUXILIARY FUNCTIONS ========================================
 winHeight :: Float -- game window height
@@ -90,20 +90,21 @@ numByXY x y = ncol + (3 * nrow) + 1
     
 -- =============== DRAWING FUCTIONS ===========================================
 -- world ----------------------------------------------------------------------         
-drawWorld :: World -> Picture
+drawWorld :: World -> IO Picture
 drawWorld (World f ms gs t) =
     case gs of
-        Finished -> drawFinish <> drawFinishTime t
-        ShowInfo -> drawInfo <> drawTime t
-        Error    -> drawField f ms 
+        Finished -> return (drawFinish <> drawFinishTime t) 
+        ShowInfo -> return (drawInfo <> drawTime t)
+        Result   -> return (drawFinish <> drawFinishTime t)
+        Error    -> return (drawField f ms 
                     <> drawNumberpad 
                     <> drawInfoSuggest
                     <> drawTime t
-                    <> drawError
-        _ -> drawField f ms 
+                    <> drawError)
+        _ -> return (drawField f ms 
              <> drawNumberpad 
              <> drawInfoSuggest
-             <> drawTime t
+             <> drawTime t)
 
 -- time -----------------------------------------------------------------------
 drawTime :: Float -> Picture
@@ -124,13 +125,14 @@ drawTime t = translate (tlppX + 9 * cellSize + 5)
         sec = mod s 60
 
 drawFinishTime :: Float -> Picture
-drawFinishTime t = translate (-4 * cellSize) 0
+drawFinishTime t = do
+  translate (-4 * cellSize) 0
                        (color blue (scale digScl digScl
                            (text "time:")))
                 <> translate (- cellSize) 0
                            (color blue (scale digScl digScl
                                 (text((show min) ++ " min " ++
-                                      (show sec) ++ " sec"))))                                   
+                                      (show sec) ++ " sec"))))                                    
     where 
         s = floor t
         min = div s 60
@@ -146,7 +148,12 @@ drawInfoSuggest = translate (tlppX + 9 * cellSize + 5)
 drawInfo :: Picture
 drawInfo = drawHeadline
         <> drawHowToPlay 
-        <> drawCloseInfo        
+        <> drawCloseInfo     
+
+drawSolve :: Field -> Picture
+drawSolve f = drawAllCells f 
+             <> drawBoldLines
+             <> drawGrid
 
 drawHeadline :: Picture
 drawHeadline = translate tlppX (tlppY - cellSize / 2)
@@ -307,40 +314,42 @@ drawClearButton = drawCell Empty
 
 -- main handler function ------------------------------------------------------
 -- defines what action to do according to mouse click coordinates -------------    
-handleWorld :: Event -> World -> World
-handleWorld _ w@World{ gameState = Finished } = w
+handleWorld :: Event -> World -> IO World
+handleWorld _ w@World{ gameState = Finished } = return w
 
 handleWorld (EventKey (MouseButton LeftButton) Down _ (x, y)) w 
-    = handleMouseLeft w x y
+    = return (handleMouseLeft w x y)
 handleWorld (EventKey (MouseButton RightButton) Down _ (x, y)) w  
-    = handleMouseRight w x y
+    = return (handleMouseRight w x y)
   
 handleWorld (EventKey (SpecialKey KeyF1) Down _ _) w 
-    = handleInfo w
+    = case gameState w of
+          Result -> return w
+          _        -> return (handleInfo w)
 
 handleWorld (EventKey (SpecialKey KeySpace) Down _ _) 
             w@World{ moveState = Selected (row, col) } 
-    = clearCell w row col
+    = return (clearCell w row col)
 handleWorld (EventKey (SpecialKey KeySpace) Down _ _) 
             w@World{ moveState = Hint (row, col) } 
-    = clearCell w row col
+    = return (clearCell w row col)
   
 handleWorld (EventKey (Char c) Down _ _) w =
     case moveState w of
-        Selected _ -> handleChar c w
-        Hint     _ -> handleChar c w
-        _ -> w
+        Selected _ -> return (handleChar c w)
+        Hint     _ -> return (handleChar c w)
+        _ -> return w
 
 handleWorld (EventKey (SpecialKey KeyRight) Down _ _) w  
-    = handleRight w  
+    = return (handleRight w)  
 handleWorld (EventKey (SpecialKey KeyLeft) Down _ _) w  
-    = handleLeft w 
+    = return (handleLeft w) 
 handleWorld (EventKey (SpecialKey KeyUp) Down _ _) w 
-    = handleUp w 
+    = return (handleUp w) 
 handleWorld (EventKey (SpecialKey KeyDown) Down _ _) w
-    = handleDown w 
+    = return (handleDown w) 
               
-handleWorld _ w = w    
+handleWorld _ w = return w    
 
 -- handlers for mouse buttons -------------------------------------------------
 -------------------------------------------------------------------------------
@@ -441,9 +450,9 @@ closestDown f row col  | row == 8 && isFixed (getCell f row col)
 -- select cell in the field ---------------------------------------------------
 handleSelect :: World -> Float -> Float -> World
 handleSelect w x y = do 
-    if isFixed c 
-        then w
-        else w { moveState = Selected (row, col) }
+    if isFixed c
+      then w
+      else w { moveState = Selected (row, col) }
     where
         row = rowByY y 
         col = colByX x
@@ -494,11 +503,12 @@ numpadHit x y = (x >= trppX - 3 * cellSize) && (y >= trppY - 4 * cellSize)  &&
                 
 -- =============== UPDATE FUNCTION ============================================
 -- increases total game time with each frap -----------------------------------
-updateWorld :: Float -> World -> World
-updateWorld dt w =
+updateWorld :: Float -> World -> IO World
+updateWorld dt w = 
     case gameState w of
-        InProgress -> incTime w
-        Error      -> incTime w
-        _          -> w
+       InProgress  -> return ( incTime w )
+       Finished    -> fixRec w
+       Error       -> return ( incTime w )
+       _           -> return w
     where
         incTime w = w { totalTime = totalTime w + dt }

@@ -155,4 +155,4 @@ getHint_r :: Field -> Int -> Int -> [Int] -> [Int]
 getHint_r f row col [] = []
 getHint_r f row col (x : xs) 
     | isPossible f row col x   = x : (getHint_r f row col xs)
-    | otherwise                = (getHint_r f row col xs)                              
+    | otherwise                = (getHint_r f row col xs)                     

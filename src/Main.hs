@@ -10,8 +10,15 @@ import Data.Char
 import Data.String
 import Data.Monoid 
 
-import Graphics.Gloss.Interface.Pure.Game
+import Graphics.Gloss.Interface.IO.Game
 
+instance Monoid b => Monoid (IO b) where
+    mempty = return mempty
+
+    mappend io1 io2 = do
+        a1 <- io1
+        a2 <- io2
+        return (mappend a1 a2)
 -- =============== MAIN FUNCTION ==============================================
 main :: IO()
 main = do
@@ -21,10 +28,12 @@ main = do
 -- graphics user interface ----------------------------------------------------                 
 interface :: IO ()
 interface = do
+
     w <- readWorld
+
     case gameState w of
-        InProgress -> play display bgColor fps w 
-                           drawWorld handleWorld updateWorld       
+        InProgress -> playIO display bgColor fps w 
+                           drawWorld handleWorld updateWorld  
         gs -> putStrLn "Incorrect input file"
     where
         windowSize = (floor winWidth, floor winHeight)

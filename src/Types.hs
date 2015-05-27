@@ -27,7 +27,7 @@ isSelected ms =
         Just _  -> True
 
 -- GAME -----------------------------------------------------------------------    
-data GameState = Finished | InProgress | ShowInfo | Error deriving Eq
+data GameState = Finished | InProgress | ShowInfo | Result | Error deriving Eq
 
 -- WORLD ----------------------------------------------------------------------    
 data World = World
