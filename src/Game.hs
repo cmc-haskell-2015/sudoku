@@ -122,6 +122,7 @@ checkAllRows (x : xs) = (checkLine x) && (checkAllRows xs)
 
 checkAllCols :: Field -> Bool
 checkAllCols f = checkAllCols_r f 0
+
 checkAllCols_r :: Field -> Int -> Bool
 checkAllCols_r f i | i == 8 = checkCol f i
                    | otherwise = checkCol f i && checkAllCols_r f (i + 1)

@@ -89,11 +89,11 @@ numByXY x y = ncol + (3 * nrow) + 1
 -- =============== DRAWING FUCTIONS ===========================================
 -- world ----------------------------------------------------------------------         
 drawWorld :: World -> IO Picture
-drawWorld (World f ms gs t) =
+drawWorld (World f ms gs t rs) =
     case gs of
         Finished -> return (drawFinish <> drawFinishTime t) 
         ShowInfo -> return (drawInfo <> drawTime t)
-        Result   -> return (drawFinish <> drawFinishTime t)
+        Result   -> return (drawFinish <> drawFinishTime t <> drawRecords rs)
         Error    -> return (drawField f ms 
                     <> drawNumberpad 
                     <> drawInfoSuggest
@@ -103,6 +103,9 @@ drawWorld (World f ms gs t) =
              <> drawNumberpad 
              <> drawInfoSuggest
              <> drawTime t)
+
+drawRecords :: [Record] -> Picture
+drawRecords _ = blank
 
 -- time -----------------------------------------------------------------------
 drawTime :: Float -> Picture

@@ -6,9 +6,15 @@ import System.IO
 import System.Directory
 
 
--- write time result to the file "Results.txt"-----------------------------------
+-- | Write time result to the file @Results.txt@.
 fixRec :: World -> IO World
-fixRec w = saveTime w >> return w { moveState = Ok, gameState = Result } 
+fixRec w = do
+  saveTime w
+  rs <- readRecords
+  return w { moveState = Ok, gameState = Result, records = rs } 
+
+readRecords :: IO [Record]
+readRecords = return []   -- FIXME
 
 saveTime :: World -> IO ()
 saveTime w = updateFile (totalTime w)
@@ -24,7 +30,7 @@ createFile = do
     if check then return () else
         writeFile "../Results.txt" "" 
 
-strToInt :: [String] -> [Int]                       
+strToInt :: [String] -> [Int]
 strToInt = map read
  
 updateFile :: Float -> IO ()
@@ -39,11 +45,12 @@ updateFile curtime = do
             where 
                 curRec = floor curtime
 
--- array process ----------------------------------------------------------------
+-- | Array process.
 addRecord :: (Ord a) => a -> [a] -> [a]
 addRecord x list = if elemInArray x list then list 
                         else insertInList x list
 
+-- | ???
 insertInList :: (Ord a) => a-> [a] -> [a]
 insertInList num [] = [num]
 insertInList num (x:xs) | (num < x) = num : x : xs

@@ -27,12 +27,21 @@ isSelected ms =
         Just _  -> True
 
 -- GAME -----------------------------------------------------------------------    
-data GameState = Finished | InProgress | ShowInfo | Result | Error deriving Eq
+data GameState
+  = Finished
+  | InProgress
+  | ShowInfo
+  | Result
+  | Error         -- ^ ???
+  deriving Eq
 
--- WORLD ----------------------------------------------------------------------    
+type Record = Int
+
+-- | WORLD
 data World = World
     { field     :: Field      -- ^ sudoku grid
     , moveState :: MoveState  -- ^ last move state (results)
     , gameState :: GameState  -- ^ global game state
     , totalTime :: Float      -- ^ total time spent on the puzzle
+    , records   :: [Record]   -- ^ record table
     }

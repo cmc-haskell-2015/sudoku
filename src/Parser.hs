@@ -21,9 +21,9 @@ readFromFile file = do
     strList <- lines <$> readFile file
     let f = createField strList
     if checkField f && not (checkFinished f) then     
-        return (World f Ok InProgress 0)
+        return (World f Ok InProgress 0 [])
     else
-        return (World [] Ok Error 0)
+        return (World [] Ok Error 0 [])
 
 -- transform file contents into field representation --------------------------
 createField :: [String] -> Field
