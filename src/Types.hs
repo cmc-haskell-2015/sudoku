@@ -1,7 +1,7 @@
 module Types where
 
 -- CELL -----------------------------------------------------------------------
-data Cell = Fixed Int | Filled Int | Empty
+data Cell = Fixed Int | Filled Int | Empty deriving (Eq)
 
 isFixed :: Cell -> Bool
 isFixed (Fixed _) = True

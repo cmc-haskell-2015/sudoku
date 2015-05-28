@@ -2,11 +2,9 @@ module Interface where
 
 import Types
 import Game
-import Parser
+import Records
 
-import Data.Functor
 import Data.Char
-import Data.String
 import Data.Monoid 
 
 import Graphics.Gloss.Interface.IO.Game
@@ -117,12 +115,12 @@ drawTime t = translate (tlppX + 9 * cellSize + 5)
                        (brppY + 5)
                            (color blue
                                (scale (0.5 * digScl) (0.5 * digScl)
-                                   (text((show min) ++ " min " ++
-                                         (show sec) ++ " sec"))))                                   
+                                   (text((show mins) ++ " min " ++
+                                         (show secs) ++ " sec"))))                                   
     where 
         s = floor t
-        min = div s 60
-        sec = mod s 60
+        mins = div s 60
+        secs = mod s 60
 
 drawFinishTime :: Float -> Picture
 drawFinishTime t = do
@@ -131,12 +129,12 @@ drawFinishTime t = do
                            (text "time:")))
                 <> translate (- cellSize) 0
                            (color blue (scale digScl digScl
-                                (text((show min) ++ " min " ++
-                                      (show sec) ++ " sec"))))                                    
+                                (text((show mins) ++ " min " ++
+                                      (show secs) ++ " sec"))))                                    
     where 
         s = floor t
-        min = div s 60
-        sec = mod s 60         
+        mins = div s 60
+        secs = mod s 60         
                         
 -- info -----------------------------------------------------------------------
 drawInfoSuggest :: Picture
@@ -506,9 +504,10 @@ numpadHit x y = (x >= trppX - 3 * cellSize) && (y >= trppY - 4 * cellSize)  &&
 updateWorld :: Float -> World -> IO World
 updateWorld dt w = 
     case gameState w of
-       InProgress  -> return ( incTime w )
+       InProgress  -> return w'
+       Error       -> return w'
+
        Finished    -> fixRec w
-       Error       -> return ( incTime w )
        _           -> return w
     where
-        incTime w = w { totalTime = totalTime w + dt }
+        w' = w { totalTime = totalTime w + dt }

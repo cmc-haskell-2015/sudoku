@@ -1,8 +1,6 @@
 module Game where
 
 import Types
-import Control.Applicative
-import Data.List
         
 -- =============== AUXILIARY FUNCTIONS ========================================        
 
@@ -139,9 +137,7 @@ checkFinished [] = True
 checkFinished (x : xs) = (checkRowFinished x) && (checkFinished xs)      
 
 checkRowFinished :: [Cell] -> Bool
-checkRowFinished [] = True
-checkRowFinished (Empty : xs) = False
-checkRowFinished (x : xs) = checkRowFinished xs  
+checkRowFinished = all (/= Empty)
 
 -- check move for possibility (without doing it) ------------------------------
 isPossible :: Field -> Int -> Int -> Int -> Bool
@@ -152,7 +148,7 @@ getHint :: Field -> Int -> Int -> [Int]
 getHint f row col = getHint_r f row col [1,2..9]
 
 getHint_r :: Field -> Int -> Int -> [Int] -> [Int]
-getHint_r f row col [] = []
+getHint_r _ _ _ [] = []
 getHint_r f row col (x : xs) 
     | isPossible f row col x   = x : (getHint_r f row col xs)
     | otherwise                = (getHint_r f row col xs)                     
